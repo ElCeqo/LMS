@@ -48,8 +48,8 @@ int main() {
     printf("hexStr: %02X%02X%02X%02X\n", hexStr[0], hexStr[1], hexStr[2], hexStr[3]);
     uint32_t num = strTou32(hexStr);
     printf("strTou32: %u\n", num);
+    
     // Check if they are inverse
-
     uint8_t hexStr2[4];
     u32str(num, hexStr2);
     printf("u32str: %02X%02X%02X%02X\n", hexStr2[0], hexStr2[1], hexStr2[2], hexStr2[3]);
