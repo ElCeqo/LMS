@@ -9,8 +9,14 @@
 /* todo: error checking */
 
 
-void handle_error(){
+void handle_error_ssl(){
     ERR_print_errors_fp(stderr);
+    abort();
+}
+
+
+void handle_error(const char *msg) {
+    fprintf(stderr, "%s\n", msg);
     abort();
 }
 
@@ -49,12 +55,12 @@ uint8_t coef(const uint8_t S[], size_t i, int w) {
 
     // w should be either 1, 2, 4, or 8
     if (w != 1 && w != 2 && w != 4 && w != 8) {
-        handle_error();  // to be changed
+        handle_error("Parameter w not in { 1, 2, 4, 8 }");
     }
 
     // If i is larger than the number of w-bit values in S, then error
     if (i >= (strlen((char *)S) * 8) / w) {
-        handle_error();  // to be changed   
+        handle_error(" I larger than the number of w-bit values in S ");  
     }
 
     size_t byte_index = floor(i * w / 8);

@@ -1,5 +1,6 @@
 # include "../include/hash.h"
 # include "../include/utils.h"
+# include "../include/lmots.h"
 # include <stdio.h>
 # include <string.h>
 # include <stdint.h>
@@ -66,6 +67,31 @@ int main() {
     int w = 4;
     uint8_t coefficient = coef(S, i, w);
     printf("coef: %u\n", coefficient);
+
+
+    // LMOTS private key generation example
+    lmots_private_key_t *priv_key;
+
+    const lmots_param_t *params = lmots_get_params(1); // Example typecode for LMOTS_SHA256_N32_W2
+    uint32_t q = 0; // Example leaf index
+    priv_key = lmots_generate_private_key(params, q);
+    if (priv_key) {
+        printf("Private key generated successfully\n");
+        printf("Typecode: %u\n", priv_key->params->typecode);
+        printf("Leaf index: %u\n", priv_key->q);
+        // print the private key values
+        for (uint16_t i = 0; i < priv_key->params->p; i++) {
+            printf("x[%u]: ", i);
+            for (size_t j = 0; j < LMOTS_N; j++) {
+                printf("%02x", priv_key->x[i][j]);
+            }
+            printf("\n");
+        }
+        // Free the private key
+        lmots_free_private_key(priv_key);
+    } else {
+        printf("Failed to generate private key\n");
+    }
 
 
 
