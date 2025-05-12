@@ -51,15 +51,19 @@ uint32_t strTou32(const uint8_t *in) {
 }
 
 // Interpret a byte string as a sequence of w-bit values
-uint8_t coef(const uint8_t S[], size_t i, int w) {
+uint64_t coef(const uint8_t S[], size_t i, int w) {
 
     // w should be either 1, 2, 4, or 8
     if (w != 1 && w != 2 && w != 4 && w != 8) {
         handle_error("Parameter w not in { 1, 2, 4, 8 }");
     }
 
+    // Computation based on the only application of coef in the LMOTS 
+    size_t total_bits = LMOTS_N * 8 + 16; // LMOTS_N + checksum (2 bytes = 16 bits)
+    size_t max_i = total_bits / w;
+
     // If i is larger than the number of w-bit values in S, then error
-    if (i >= (strlen((char *)S) * 8) / w) {
+    if (i >= max_i) {
         handle_error(" I larger than the number of w-bit values in S ");  
     }
 

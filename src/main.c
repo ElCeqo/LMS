@@ -111,7 +111,33 @@ int main() {
         printf("Failed to generate public key\n");
     }
 
-
+    // LMOTS signature generation example
+    lmots_signature_t *sig;
+    const char *message = "Hello, LMOTS!";
+    size_t msg_len = strlen(message);
+    sig = lmots_sign(priv_key, (const uint8_t *)message, msg_len);
+    if (sig) {
+        printf("Signature generated successfully\n");
+        // Print the randomizer
+        printf("C: ");
+        for (size_t j = 0; j < LMOTS_N; j++) {
+            printf("%02x", sig->C[j]);
+        }
+        printf("\n");
+        // Print the signature values
+        for (uint16_t i = 0; i < sig->params->p; i++) {
+            printf("y[%u]: ", i);
+            for (size_t j = 0; j < LMOTS_N; j++) {
+                printf("%02x", sig->y[i][j]);
+            }
+            printf("\n");
+        }
+    } else {
+        printf("Failed to generate signature\n");
+    }
+    
+    // Free the signature
+    lmots_free_signature(sig);
     // Free the private key
     lmots_free_private_key(priv_key);
     // Free the public key

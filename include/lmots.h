@@ -10,7 +10,8 @@
 
 # define LMOTS_PARAM_COUNT 4
 # define LMOTS_N 32            // Length of the hash output in bytes (sha256)
-# define D_PBLC 0X8080         // Public key delimiter as per rfc8554
+# define D_PBLC 0X8080         // as per rfc8554
+# define D_MESG 0X8181         // as per rfc8554
 
 typedef struct
 {
@@ -60,5 +61,7 @@ void lmots_free_signature(lmots_signature_t *sig);
 
 int lmots_verify(const lmots_public_key_t *pub, const uint8_t *message, size_t msg_len, const lmots_signature_t *sig);
 
+// -- Utility Functions --
+uint16_t checksum(const uint8_t *q, const lmots_param_t *params);
 
 #endif // LMOTS_H
