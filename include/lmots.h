@@ -5,9 +5,12 @@
 # include <stdint.h>
 # include <stdlib.h>
 # include <openssl/rand.h>
+# include <string.h>
+# include "hash.h"
 
 # define LMOTS_PARAM_COUNT 4
-# define LMOTS_N 32 // Length of the hash output in bytes
+# define LMOTS_N 32            // Length of the hash output in bytes (sha256)
+# define D_PBLC 0X8080         // Public key delimiter as per rfc8554
 
 typedef struct
 {

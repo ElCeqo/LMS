@@ -72,8 +72,8 @@ int main() {
     // LMOTS private key generation example
     lmots_private_key_t *priv_key;
 
-    const lmots_param_t *params = lmots_get_params(1); // Example typecode for LMOTS_SHA256_N32_W2
-    uint32_t q = 0; // Example leaf index
+    const lmots_param_t *params = lmots_get_params(4);
+    uint32_t q = 1; // Example leaf index
     priv_key = lmots_generate_private_key(params, q);
     if (priv_key) {
         printf("Private key generated successfully\n");
@@ -87,12 +87,35 @@ int main() {
             }
             printf("\n");
         }
-        // Free the private key
-        lmots_free_private_key(priv_key);
     } else {
         printf("Failed to generate private key\n");
     }
+  
+    // LMOTS public key generation example using the private key just generated
+    lmots_public_key_t *pub_key;
 
+    pub_key = lmots_generate_public_key(priv_key);
+    if (pub_key) {
+        printf("Public key generated successfully\n");
+        printf("Typecode: %u\n", pub_key->params->typecode);
+        printf("Leaf index: %u\n", pub_key->q);
+        // print the public key value
+        printf("K: ");
+        for (size_t j = 0; j < LMOTS_N; j++) {
+            printf("%02x", pub_key->K[j]);
+        }
+        printf("\n");
+        // Free the public key
+        //lmots_free_public_key(pub_key);
+    } else {
+        printf("Failed to generate public key\n");
+    }
+
+
+    // Free the private key
+    lmots_free_private_key(priv_key);
+    // Free the public key
+    lmots_free_public_key(pub_key);
 
 
     return 0;

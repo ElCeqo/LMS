@@ -69,3 +69,79 @@ void lmots_free_private_key(lmots_private_key_t *key) {
 }
 
 // Public key generation
+lmots_public_key_t *lmots_generate_public_key(const lmots_private_key_t *priv) {
+    lmots_public_key_t *pub = malloc(sizeof(lmots_public_key_t));
+
+    if (!pub) {
+        handle_error("Memory allocation failed for public key");
+    }
+    pub->params = priv->params;
+    pub->q = priv->q;
+
+    uint8_t **y = malloc(priv->params->p * sizeof(uint8_t *));
+    if (!y) {
+        handle_error("Memory allocation failed for y array");
+    }
+
+    uint16_t steps = (1 << pub->params->w) - 1; // Here for efficiency
+
+
+    for (uint16_t i = 0; i < pub->params->p; i++) {
+        
+        // Allocate memory for element i in the y array
+        y[i] = malloc(LMOTS_N);
+        if (!y[i]) {
+            handle_error("Memory allocation failed for y[i]");
+        }
+
+        uint8_t tmp[LMOTS_N];
+        memcpy(tmp, priv->x[i], LMOTS_N);
+
+        // Compute the hash of the concatenation
+        // hash inpyt is LMOTS_I || q || i || j || tmp
+        // therefore 16 + 4 + 2 + 1 + 32 = 55
+        uint8_t hash_input[sizeof(LMOTS_I) + sizeof(priv->q) + sizeof(i) + 1 + LMOTS_N];
+        if ( i == 4 ) printf("total size: %zu\n", sizeof(hash_input));
+
+        for (uint16_t j = 0; j < steps; j++) {
+            memcpy(hash_input, LMOTS_I, sizeof(LMOTS_I));
+            u32str(priv->q, &hash_input[sizeof(LMOTS_I)]);
+            u16str(i, &hash_input[sizeof(LMOTS_I) + sizeof(priv->q)]);
+            u8str(j, &hash_input[sizeof(LMOTS_I) + sizeof(priv->q) + sizeof(i)]);
+            memcpy(&hash_input[sizeof(LMOTS_I) + sizeof(priv->q) + sizeof(i) + 1], tmp, LMOTS_N);
+            // Compute the hash
+            sha256(hash_input, sizeof(hash_input), tmp);
+        }
+        // Copy the hash result to y[i]
+        memcpy(y[i], tmp, LMOTS_N);
+    }
+
+    // Compute K = H(LMOTS_I || q || D_PBLC || y[0] || y[1] || ... || y[p-1])
+    uint8_t hash_input[sizeof(LMOTS_I) + sizeof(priv->q) + 2 + (LMOTS_N * priv->params->p)];
+    memcpy(hash_input, LMOTS_I, sizeof(LMOTS_I));
+    u32str(priv->q, &hash_input[sizeof(LMOTS_I)]);
+    hash_input[sizeof(LMOTS_I) + sizeof(priv->q)] = D_PBLC >> 8;
+    hash_input[sizeof(LMOTS_I) + sizeof(priv->q) + 1] = D_PBLC & 0xFF;
+
+    for (uint16_t i = 0; i < priv->params->p; i++) {
+        memcpy(&hash_input[sizeof(LMOTS_I) + sizeof(priv->q) + sizeof(D_PBLC) + (i * LMOTS_N)], y[i], LMOTS_N);
+    }
+
+    // Compute the hash
+    sha256(hash_input, sizeof(hash_input), pub->K);
+
+    // Free the y array
+    for (uint16_t i = 0; i < priv->params->p; i++) {
+        free(y[i]);
+    }
+    free(y);
+
+    return pub;
+}
+
+// Free the public key
+void lmots_free_public_key(lmots_public_key_t *pub) {
+    if (pub) {
+        free(pub);
+    }
+}
