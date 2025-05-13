@@ -115,7 +115,10 @@ int main() {
     lmots_signature_t *sig;
     const char *message = "Hello, LMOTS!";
     size_t msg_len = strlen(message);
-    sig = lmots_sign(priv_key, (const uint8_t *)message, msg_len);
+    // Convert message to uint8_t array
+    uint8_t message_bytes[msg_len];
+    memcpy(message_bytes, message, msg_len);
+    sig = lmots_sign(priv_key, message_bytes, msg_len);
     if (sig) {
         printf("Signature generated successfully\n");
         // Print the randomizer
@@ -134,6 +137,14 @@ int main() {
         }
     } else {
         printf("Failed to generate signature\n");
+    }
+
+    // LMOTS signature verification example
+    int result = lmots_verify(pub_key, (const uint8_t *)message, msg_len, sig);
+    if (result == 0) {
+        printf("Signature verification successful\n");
+    } else {
+        printf("Signature verification failed\n");
     }
     
     // Free the signature

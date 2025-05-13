@@ -12,6 +12,9 @@
 # define LMOTS_N 32            // Length of the hash output in bytes (sha256)
 # define D_PBLC 0X8080         // as per rfc8554
 # define D_MESG 0X8181         // as per rfc8554
+# define LMOTS_I_LEN 16        // Length of LMOTS_I in bytes
+# define Q_LEN 4               // Length of q in bytes
+# define HASH_PREFIX_LEN 2     // Length of D_PBLC and D_MESG in bytes
 
 typedef struct
 {

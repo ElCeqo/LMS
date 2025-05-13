@@ -110,15 +110,15 @@ lmots_public_key_t *lmots_generate_public_key(const lmots_private_key_t *priv) {
         // Compute the hash of the concatenation
         // hash inpyt is LMOTS_I || q || i || j || tmp
         // therefore 16 + 4 + 2 + 1 + 32 = 55
-        uint8_t hash_input[sizeof(LMOTS_I) + sizeof(priv->q) + sizeof(i) + 1 + LMOTS_N];
+        uint8_t hash_input[LMOTS_I_LEN + Q_LEN + sizeof(i) + 1 + LMOTS_N];
         if ( i == 4 ) printf("total size: %zu\n", sizeof(hash_input));
 
         for (uint16_t j = 0; j < steps; j++) {
-            memcpy(hash_input, LMOTS_I, sizeof(LMOTS_I));
-            u32str(priv->q, &hash_input[sizeof(LMOTS_I)]);
-            u16str(i, &hash_input[sizeof(LMOTS_I) + sizeof(priv->q)]);
-            u8str(j, &hash_input[sizeof(LMOTS_I) + sizeof(priv->q) + sizeof(i)]);
-            memcpy(&hash_input[sizeof(LMOTS_I) + sizeof(priv->q) + sizeof(i) + 1], tmp, LMOTS_N);
+            memcpy(hash_input, LMOTS_I, LMOTS_I_LEN);
+            u32str(priv->q, &hash_input[LMOTS_I_LEN]);
+            u16str(i, &hash_input[LMOTS_I_LEN + Q_LEN]);
+            u8str(j, &hash_input[LMOTS_I_LEN + Q_LEN + sizeof(i)]);
+            memcpy(&hash_input[LMOTS_I_LEN + Q_LEN + sizeof(i) + 1], tmp, LMOTS_N);
             // Compute the hash
             sha256(hash_input, sizeof(hash_input), tmp);
         }
@@ -127,18 +127,17 @@ lmots_public_key_t *lmots_generate_public_key(const lmots_private_key_t *priv) {
     }
 
     // Compute K = H(LMOTS_I || q || D_PBLC || y[0] || y[1] || ... || y[p-1])
-    uint8_t hash_input[sizeof(LMOTS_I) + sizeof(priv->q) + 2 + (LMOTS_N * priv->params->p)];
-    memcpy(hash_input, LMOTS_I, sizeof(LMOTS_I));
-    u32str(priv->q, &hash_input[sizeof(LMOTS_I)]);
-    hash_input[sizeof(LMOTS_I) + sizeof(priv->q)] = D_PBLC >> 8;
-    hash_input[sizeof(LMOTS_I) + sizeof(priv->q) + 1] = D_PBLC & 0xFF;
-
+    uint8_t hash_input2[LMOTS_I_LEN + Q_LEN + HASH_PREFIX_LEN + (LMOTS_N * priv->params->p)];
+    memcpy(hash_input2, LMOTS_I, LMOTS_I_LEN);
+    u32str(priv->q, &hash_input2[LMOTS_I_LEN]);
+    hash_input2[LMOTS_I_LEN + Q_LEN] = D_PBLC >> 8;
+    hash_input2[LMOTS_I_LEN + Q_LEN + 1] = D_PBLC & 0xFF;
     for (uint16_t i = 0; i < priv->params->p; i++) {
-        memcpy(&hash_input[sizeof(LMOTS_I) + sizeof(priv->q) + sizeof(D_PBLC) + (i * LMOTS_N)], y[i], LMOTS_N);
+        memcpy(&hash_input2[LMOTS_I_LEN + Q_LEN + HASH_PREFIX_LEN + (i * LMOTS_N)], y[i], LMOTS_N);
     }
 
     // Compute the hash
-    sha256(hash_input, sizeof(hash_input), pub->K);
+    sha256(hash_input2, sizeof(hash_input2), pub->K);
 
     // Free the y array
     for (uint16_t i = 0; i < priv->params->p; i++) {
@@ -171,13 +170,13 @@ lmots_signature_t *lmots_sign(const lmots_private_key_t *priv, const uint8_t *me
 
     uint8_t q[LMOTS_N];
 
-    uint8_t hash_input[sizeof(LMOTS_I) + sizeof(priv->q) + 2 + sizeof(sig->C) + msg_len];
-    memcpy(hash_input, LMOTS_I, sizeof(LMOTS_I));
-    u32str(priv->q, &hash_input[sizeof(LMOTS_I)]);
-    hash_input[sizeof(LMOTS_I) + sizeof(priv->q)] = D_MESG >> 8;
-    hash_input[sizeof(LMOTS_I) + sizeof(priv->q) + 1] = D_MESG & 0xFF;
-    memcpy(&hash_input[sizeof(LMOTS_I) + sizeof(priv->q) + 2], sig->C, LMOTS_N);
-    memcpy(&hash_input[sizeof(LMOTS_I) + sizeof(priv->q) + 2 + LMOTS_N], message, msg_len);
+    uint8_t hash_input[LMOTS_I_LEN + Q_LEN + HASH_PREFIX_LEN + LMOTS_N + msg_len];
+    memcpy(hash_input, LMOTS_I, LMOTS_I_LEN);
+    u32str(priv->q, &hash_input[LMOTS_I_LEN]);
+    hash_input[LMOTS_I_LEN + Q_LEN] = D_MESG >> 8;
+    hash_input[LMOTS_I_LEN + Q_LEN + 1] = D_MESG & 0xFF;
+    memcpy(&hash_input[LMOTS_I_LEN + Q_LEN + HASH_PREFIX_LEN], sig->C, LMOTS_N);
+    memcpy(&hash_input[LMOTS_I_LEN + Q_LEN + HASH_PREFIX_LEN + LMOTS_N], message, msg_len);
     
     // Compute the hash
     sha256(hash_input, sizeof(hash_input), q);
@@ -207,15 +206,16 @@ lmots_signature_t *lmots_sign(const lmots_private_key_t *priv, const uint8_t *me
         uint8_t tmp[LMOTS_N];
         memcpy(tmp, priv->x[i], LMOTS_N);
 
-        uint8_t hash_input2[sizeof(LMOTS_I) + sizeof(priv->q) + sizeof(i) + 1 + LMOTS_N];
-        if ( i == 4 ) printf("total size: %zu\n", sizeof(hash_input2));
+        uint8_t hash_input2[LMOTS_I_LEN + Q_LEN + sizeof(i) + 1 + LMOTS_N];
 
+        // Compute the hash of the concatenation
+        // hash input is LMOTS_I || q || i || j || tmp
         for (uint64_t j = 0; j < a; j++) {
-            memcpy(hash_input2, LMOTS_I, sizeof(LMOTS_I));
-            u32str(priv->q, &hash_input2[sizeof(LMOTS_I)]);
-            u16str(i, &hash_input2[sizeof(LMOTS_I) + sizeof(priv->q)]);
-            u8str(j, &hash_input2[sizeof(LMOTS_I) + sizeof(priv->q) + sizeof(i)]);
-            memcpy(&hash_input2[sizeof(LMOTS_I) + sizeof(priv->q) + sizeof(i) + 1], tmp, LMOTS_N);
+            memcpy(hash_input2, LMOTS_I, LMOTS_I_LEN);
+            u32str(priv->q, &hash_input2[LMOTS_I_LEN]);
+            u16str(i, &hash_input2[LMOTS_I_LEN + Q_LEN]);
+            u8str(j, &hash_input2[LMOTS_I_LEN + Q_LEN + sizeof(i)]);
+            memcpy(&hash_input2[LMOTS_I_LEN + Q_LEN + sizeof(i) + 1], tmp, LMOTS_N);
             // Compute the hash
             sha256(hash_input2, sizeof(hash_input2), tmp);
         }
@@ -235,4 +235,142 @@ void lmots_free_signature(lmots_signature_t *sig) {
         free(sig->y);
         free(sig);
     }
+}
+
+// Verify a Signature and Message using a public key
+int lmots_verify(const lmots_public_key_t *pub, const uint8_t *message, size_t msg_len, const lmots_signature_t *sig){
+
+    // Check for null pointers
+    if (!pub || !sig || !message) {
+        handle_error("Null input to lmots_verify");
+        return -1;
+    }
+
+    /* // Uncomment this section if you want to check the parameters
+    if (sig->params->typecode != pub->params->typecode) {
+        handle_error("Signature and public key typecodes do not match");
+        return -1;
+    }
+    if (sig->params->p != pub->params->p || sig->params->w != pub->params->w || sig->params->ls != pub->params->ls) {
+        handle_error("Signature and public key parameters do not match");
+        return -1;
+    }
+    */
+
+    // TODO: Check signature length, must be exactly 4 + n * (p + 1) bytes long
+    
+
+    // Compute public key candidate
+    // Note: Parameters I, q, K and C should be parsed from the signature when it is serialized (e.g from a network buffer).
+    // This implementation is not meant for serialization, so we take the values from the public key.
+    lmots_public_key_t *pub_candidate = malloc(sizeof(lmots_public_key_t));
+    if (!pub_candidate) {
+        handle_error("Memory allocation failed for public key candidate");
+    }
+    pub_candidate->params = pub->params;
+    pub_candidate->q = pub->q;
+    memcpy(pub_candidate->K, pub->K, LMOTS_N);
+
+    uint8_t q[LMOTS_N];
+
+    uint8_t hash_input[LMOTS_I_LEN + Q_LEN + HASH_PREFIX_LEN + LMOTS_N + msg_len];
+    memcpy(hash_input, LMOTS_I, LMOTS_I_LEN);
+    u32str(pub->q, &hash_input[LMOTS_I_LEN]);
+    hash_input[LMOTS_I_LEN + Q_LEN] = D_MESG >> 8;
+    hash_input[LMOTS_I_LEN + Q_LEN + 1] = D_MESG & 0xFF;
+    memcpy(&hash_input[LMOTS_I_LEN + Q_LEN + HASH_PREFIX_LEN], sig->C, LMOTS_N);
+    memcpy(&hash_input[LMOTS_I_LEN + Q_LEN + HASH_PREFIX_LEN + LMOTS_N], message, msg_len);
+    
+    // Compute the hash
+    sha256(hash_input, sizeof(hash_input), q);
+
+    // Allocate memory for the z array
+    uint8_t **z = malloc(pub->params->p * sizeof(uint8_t *));
+    if (!z) {
+        handle_error("Memory allocation failed for z array");
+    }
+
+    for (uint16_t i = 0; i < pub->params->p; i++) {
+
+        // Allocate memory for element i in the z array
+        z[i] = malloc(LMOTS_N);
+        if (!z[i]) {
+            handle_error("Memory allocation failed for z[i]");
+        }
+
+        // a = coef(q || checksum(q), i, w)
+        // Compute the checksum
+        uint16_t cs = checksum(q, sig->params);
+        uint8_t coef_input[LMOTS_N + sizeof(cs)];
+        memcpy(coef_input, q, LMOTS_N);
+        u16str(cs, &coef_input[LMOTS_N]);
+        uint64_t a = coef(coef_input, i, sig->params->w);
+
+        uint8_t tmp[LMOTS_N];
+        memcpy(tmp, sig->y[i], LMOTS_N);
+
+        uint8_t hash_input2[LMOTS_I_LEN + Q_LEN + sizeof(i) + 1 + LMOTS_N];
+        
+        // Compute the hash of the concatenation
+        // hash input is LMOTS_I || q || i || j || tmp
+        for (uint64_t j = a; j < ((uint64_t)(1 << pub->params->w) - 1); j++) {
+
+            memcpy(hash_input2, LMOTS_I, LMOTS_I_LEN);
+            u32str(pub->q, &hash_input2[LMOTS_I_LEN]);
+            u16str(i, &hash_input2[LMOTS_I_LEN + Q_LEN]);
+            u8str(j, &hash_input2[LMOTS_I_LEN + Q_LEN + sizeof(i)]);
+            memcpy(&hash_input2[LMOTS_I_LEN + Q_LEN + sizeof(i) + 1], tmp, LMOTS_N);
+            // Compute the hash
+            sha256(hash_input2, sizeof(hash_input2), tmp);
+        }
+
+        // Copy the hash result to z[i]
+        memcpy(z[i], tmp, LMOTS_N);
+    }
+
+    // Compute K' = H(LMOTS_I || q || D_PBLC || z[0] || z[1] || ... || z[p-1])
+    uint8_t hash_input3[LMOTS_I_LEN + Q_LEN + HASH_PREFIX_LEN + (LMOTS_N * pub->params->p)];
+    memcpy(hash_input3, LMOTS_I, LMOTS_I_LEN);
+    u32str(pub->q, &hash_input3[LMOTS_I_LEN]);
+    hash_input3[LMOTS_I_LEN + Q_LEN] = D_PBLC >> 8;
+    hash_input3[LMOTS_I_LEN + Q_LEN + 1] = D_PBLC & 0xFF;
+    for (uint16_t i = 0; i < pub->params->p; i++) {
+        memcpy(&hash_input3[LMOTS_I_LEN + Q_LEN + HASH_PREFIX_LEN + (i * LMOTS_N)], z[i], LMOTS_N);
+    }
+    // Compute the hash
+    sha256(hash_input3, sizeof(hash_input3), pub_candidate->K);
+
+    // DEBUG Print K' and K values
+    printf("K' and K do not match\n");
+    printf("K': ");
+    for (size_t j = 0; j < LMOTS_N; j++) {
+        printf("%02x", pub_candidate->K[j]);
+    }
+    printf("\nK : ");
+    for (size_t j = 0; j < LMOTS_N; j++) {
+        printf("%02x", pub->K[j]);
+    }
+    printf("\n");
+
+    // Compare K' with K
+    if (memcmp(pub_candidate->K, pub->K, LMOTS_N) != 0) {
+        // Free allocated memory
+        for (uint16_t i = 0; i < pub->params->p; i++) {
+            free(z[i]);
+        }
+        free(z);
+        free(pub_candidate);
+        return -1; // Verification failed
+    }
+
+    // Free allocated memory
+    for (uint16_t i = 0; i < pub->params->p; i++) {
+        free(z[i]);
+    }
+
+    free(z);
+    free(pub_candidate);
+    
+    return 0; // Verification succeeded
+    
 }
