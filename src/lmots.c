@@ -341,7 +341,6 @@ int lmots_verify(const lmots_public_key_t *pub, const uint8_t *message, size_t m
     sha256(hash_input3, sizeof(hash_input3), pub_candidate->K);
 
     // DEBUG Print K' and K values
-    printf("K' and K do not match\n");
     printf("K': ");
     for (size_t j = 0; j < LMOTS_N; j++) {
         printf("%02x", pub_candidate->K[j]);
@@ -359,7 +358,7 @@ int lmots_verify(const lmots_public_key_t *pub, const uint8_t *message, size_t m
             free(z[i]);
         }
         free(z);
-        free(pub_candidate);
+        lmots_free_public_key(pub_candidate);
         return -1; // Verification failed
     }
 
